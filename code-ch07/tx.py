@@ -162,19 +162,50 @@ class Tx:
         signed for index input_index'''
         # start the serialization with version
         # use int_to_little_endian in 4 bytes
+        result = int_to_little_endian(self.version, 4)
+
         # add how many inputs there are using encode_varint
+        result += encode_varint(len(self.tx_ins))
+
         # loop through each input using enumerate, so we have the input index
+        for i in range(len(self.tx_ins)):
             # if the input index is the one we're signing
             # the previous tx's ScriptPubkey is the ScriptSig
             # Otherwise, the ScriptSig is empty
             # add the serialization of the input with the ScriptSig we want
+            tx_in = self.tx_ins[i]
+            script_sig = ''
+            if i == input_index:
+                script_sig = tx_in.script_pubkey(self.testnet)
+            else:
+                script_sig = None
+            modified_tx = TxIn(tx_in.prev_tx, tx_in.prev_index, script_sig, tx_in.sequence)
+            result += modified_tx.serialize()
+                
         # add how many outputs there are using encode_varint
+        result += encode_varint(len(self.tx_outs))
+
         # add the serialization of each output
+        for tx_out in self.tx_outs:
+            # serialize each output
+            result += tx_out.serialize()
+
         # add the locktime using int_to_little_endian in 4 bytes
+        result += int_to_little_endian(self.locktime, 4)
+
         # add SIGHASH_ALL using int_to_little_endian in 4 bytes
+        result += int_to_little_endian(1, 4)        
+        
         # hash256 the serialization
+        result = hash256(result)
+
         # convert the result to an integer using int.from_bytes(x, 'big')
-        raise NotImplementedError
+        result = int.from_bytes(result, 'big')
+        
+        #raise NotImplementedError
+        
+        return result
+        
 
     def verify_input(self, input_index):
         '''Returns whether the input has a valid signature'''
