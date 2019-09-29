@@ -214,7 +214,13 @@ class Tx:
         # get the signature hash (z)
         # combine the current ScriptSig and the previous ScriptPubKey
         # evaluate the combined script
-        raise NotImplementedError
+        # raise NotImplementedError
+        tx_in = self.tx_ins[input_index]
+        script_pubkey = tx_in.script_pubkey(testnet=self.testnet)
+        z = self.sig_hash(input_index)
+        combined = tx_in.script_sig + script_pubkey
+        return combined.evaluate(z)
+    
 
     # tag::source2[]
     def verify(self):
@@ -235,9 +241,15 @@ class Tx:
         # initialize a new script with [sig, sec] as the cmds
         # change input's script_sig to new script
         # return whether sig is valid using self.verify_input
-        raise NotImplementedError
+        #raise NotImplementedError
+        z = self.sig_hash(input_index)
+        der = private_key.sign(z).der() + SIGHASH_ALL.to_bytes(1, 'big')
+        sec = private_key.point.sec()
+        cmds = Script([der, sec])
+        self.tx_ins[input_index].script_sig = cmds
+        return self.verify_input(input_index)
 
-
+    
 class TxIn:
 
     def __init__(self, prev_tx, prev_index, script_sig=None, sequence=0xffffffff):
