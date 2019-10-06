@@ -6,3 +6,4 @@
 *.rej
 *.patch
 env/
+code-ch07/mypk.py
